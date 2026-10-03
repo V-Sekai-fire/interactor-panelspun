@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
 # Fails when the test binary lists a non-control case that EXPECTED does not name.
 execute_process(COMMAND ${TESTS} --list OUTPUT_VARIABLE listed RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)

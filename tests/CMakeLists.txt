@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
 add_executable(panelspun-tests main.cpp split_tree_test.cpp)
 target_link_libraries(panelspun-tests PRIVATE panelspun)
 

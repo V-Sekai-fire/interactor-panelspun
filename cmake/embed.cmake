@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
 # Writes INPUT as a C++ byte array named SYMBOL into OUTPUT.
 file(READ ${INPUT} hex HEX)
 string(LENGTH "${hex}" hexlen)

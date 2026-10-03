@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
 # ThorVG ships a meson build; this target compiles the same sources for the CPU engine
 # with the SVG and TTF loaders, matching meson -Dengines=cpu -Dloaders=svg,ttf -Dthreads=false.
 set(TVG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/thorvg)
