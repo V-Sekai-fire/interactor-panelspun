@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
+cmake_minimum_required(VERSION 3.24)
 # Writes INPUT as a C++ byte array named SYMBOL into OUTPUT.
 file(READ ${INPUT} hex HEX)
 string(LENGTH "${hex}" hexlen)

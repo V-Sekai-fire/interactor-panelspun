@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
+cmake_minimum_required(VERSION 3.24)
 # Fails when the test binary lists a non-control case that EXPECTED does not name.
 execute_process(COMMAND ${TESTS} --list OUTPUT_VARIABLE listed RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
@@ -7,7 +8,7 @@ endif()
 string(REPLACE "\n" ";" listed "${listed}")
 set(missing "")
 foreach(name IN LISTS listed)
-  if(name STREQUAL "" OR name MATCHES "^control\.")
+  if(name STREQUAL "" OR name MATCHES "^control[.]")
     continue()
   endif()
   if(NOT name IN_LIST EXPECTED)
