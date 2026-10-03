@@ -39,3 +39,14 @@ foreach(control control.failing-check-fails control.empty-case-fails control.unk
   add_test(NAME ${control} COMMAND panelspun-tests ${control})
   set_tests_properties(${control} PROPERTIES WILL_FAIL TRUE)
 endforeach()
+
+# These open a window and need a Vulkan device, so CI runners leave them off.
+if(PANELSPUN_GPU_TESTS AND TARGET panelspun-demo)
+  set(shot ${CMAKE_CURRENT_BINARY_DIR}/demo-smoke.bmp)
+  add_test(NAME demo.vulkan-region-composited
+    COMMAND panelspun-demo --frames 4 --screenshot ${shot} --check --validate)
+  add_test(NAME demo.control-without-vulkan-region-fails
+    COMMAND panelspun-demo --frames 4 --screenshot ${CMAKE_CURRENT_BINARY_DIR}/demo-control.bmp --check --no-vulkan-region)
+  set_tests_properties(demo.control-without-vulkan-region-fails PROPERTIES WILL_FAIL TRUE)
+  set_tests_properties(demo.vulkan-region-composited demo.control-without-vulkan-region-fails PROPERTIES RUN_SERIAL TRUE)
+endif()
