@@ -5,6 +5,7 @@
 #include <thorvg.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <map>
 
@@ -25,6 +26,7 @@ struct Window::Impl {
     std::uint32_t targetW = 0;
     std::uint32_t targetH = 0;
     bool dirty = true;
+    std::atomic<bool> wakeRequested{false};
     bool closing = false;
     int dragNode = -1;
     int hoverNode = -1;
@@ -138,6 +140,12 @@ bool Window::setPanel(const std::string& id, std::unique_ptr<Panel> panel) {
 SplitTree& Window::layout() { return impl_->tree; }
 const VulkanContext& Window::vulkan() const { return impl_->presenter.context(); }
 void Window::requestRedraw() { impl_->dirty = true; }
+void Window::requestRedrawFromAnyThread() {
+    if (impl_->wakeRequested.exchange(true)) return;
+    SDL_Event e{};
+    e.type = SDL_EVENT_USER;
+    SDL_PushEvent(&e);
+}
 void Window::requestClose() { impl_->closing = true; }
 void Window::captureNextFrame(std::string path) {
     impl_->capturePath = std::move(path);
@@ -355,6 +363,7 @@ int Window::run(int frameLimit) {
         if (frameLimit > 0) s.dirty = true;
         if (!s.dirty && SDL_WaitEvent(&e)) s.handle(e);
         while (SDL_PollEvent(&e)) s.handle(e);
+        if (s.wakeRequested.exchange(false)) s.dirty = true;
         if (s.closing || !s.dirty) continue;
         s.dirty = false;
         Impl::Frame f = s.render();

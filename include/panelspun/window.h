@@ -40,6 +40,8 @@ public:
     // Pumps events and presents until the window closes or frameLimit frames are presented.
     int run(int frameLimit = 0);
     void requestRedraw();
+    // Safe from any thread: wakes the frame loop and redraws, for content produced off the UI thread.
+    void requestRedrawFromAnyThread();
     void requestClose();
 
     // Copies the next presented frame to a BMP file.

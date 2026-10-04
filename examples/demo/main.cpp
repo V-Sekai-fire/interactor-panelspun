@@ -5,8 +5,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <atomic>
+#include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "panelspun/widgets.h"
 #include "panelspun/window.h"
@@ -20,10 +23,14 @@ constexpr std::uint8_t kVideoRgb[3] = {26, 115, 140};
 // Stands in for a decoder's output: clears its region with a solid colour on the GPU.
 class VideoPanel : public Panel {
 public:
-    explicit VideoPanel(bool vulkan) : Panel("Video preview"), vulkan_(vulkan) {}
+    VideoPanel(bool vulkan, std::atomic<int>* frames) : Panel("Video preview"), vulkan_(vulkan), frames_(frames) {}
     bool usesVulkanRegion() const override { return vulkan_; }
-    void draw(DrawContext& ctx) override { (void)ctx; }
+    void draw(DrawContext& ctx) override {
+        (void)ctx;
+        ++*frames_;
+    }
     void recordVulkan(const VulkanRegionFrame& f) override {
+        ++*frames_;
         if (!clear_)
             clear_ = reinterpret_cast<PFN_vkCmdClearColorImage>(
                 f.context->getDeviceProcAddr(f.context->device, "vkCmdClearColorImage"));
@@ -38,6 +45,7 @@ public:
 
 private:
     bool vulkan_;
+    std::atomic<int>* frames_;
     PFN_vkCmdClearColorImage clear_ = nullptr;
 };
 
@@ -79,6 +87,8 @@ int main(int argc, char** argv) {
     bool check = false;
     bool allFeatures = false;
     bool checkFeatures = false;
+    int wakes = -1;
+    bool sendWakes = true;
     for (int i = 1; i < argc; ++i) {
         if (!std::strcmp(argv[i], "--frames") && i + 1 < argc) frames = std::atoi(argv[++i]);
         else if (!std::strcmp(argv[i], "--screenshot") && i + 1 < argc) screenshot = argv[++i];
@@ -87,10 +97,12 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(argv[i], "--no-vulkan-region")) vulkanRegion = false;
         else if (!std::strcmp(argv[i], "--all-features")) allFeatures = true;
         else if (!std::strcmp(argv[i], "--check-features")) checkFeatures = true;
+        else if (!std::strcmp(argv[i], "--wake-check") && i + 1 < argc) wakes = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "--no-wake")) sendWakes = false;
         else {
             std::fprintf(stderr,
                          "usage: panelspun-demo [--frames N] [--screenshot out.bmp] [--check] [--validate] "
-                         "[--no-vulkan-region] [--all-features] [--check-features]\n");
+                         "[--no-vulkan-region] [--all-features] [--check-features] [--wake-check N [--no-wake]]\n");
             return 2;
         }
     }
@@ -124,7 +136,8 @@ int main(int argc, char** argv) {
         if (vk.apiVersion < VK_API_VERSION_1_3 || !vk.instanceInfo || !chained) return 1;
     }
 
-    window->setPanel("video", std::make_unique<VideoPanel>(vulkanRegion));
+    std::atomic<int> draws{0};
+    window->setPanel("video", std::make_unique<VideoPanel>(vulkanRegion, &draws));
 
     std::unique_ptr<WidgetPanel> controls = std::make_unique<WidgetPanel>("Controls");
     Label* level = controls->add(std::make_unique<Label>("Exposure: 50%"));
@@ -142,7 +155,26 @@ int main(int argc, char** argv) {
     window->setPanel("actions", std::move(actions));
 
     int rc = 0;
-    if (frames > 0) {
+    if (wakes > 0) {
+        // A worker thread asks for redraws; each must render at least once more than an idle window would.
+        int before = 0;
+        std::thread worker([&]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(400));
+            before = draws.load();
+            for (int i = 0; i < wakes; ++i) {
+                if (sendWakes) window->requestRedrawFromAnyThread();
+                std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            }
+            SDL_Event quit{};
+            quit.type = SDL_EVENT_QUIT;
+            SDL_PushEvent(&quit);
+        });
+        rc = window->run();
+        worker.join();
+        const int rendered = draws.load() - before;
+        std::printf("wake: %d redraws for %d requests\n", rendered, wakes);
+        if (rc == 0 && rendered < wakes) rc = 3;
+    } else if (frames > 0) {
         if (frames > 1) rc = window->run(frames - 1);
         if (!screenshot.empty()) window->captureNextFrame(screenshot);
         if (rc == 0) rc = window->run(1);
