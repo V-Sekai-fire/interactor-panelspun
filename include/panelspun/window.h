@@ -17,6 +17,9 @@ struct WindowConfig {
     Theme theme;
     // Enables the Khronos validation layer; creation fails if the layer is not installed.
     bool vulkanValidation = false;
+    // Creates a Vulkan 1.3 instance and device with every supported core feature enabled, for a
+    // consumer recording compute work on the window's device; fails on a device below 1.3.
+    bool vulkanAllFeatures = false;
 };
 
 class Window {
@@ -37,6 +40,8 @@ public:
     // Pumps events and presents until the window closes or frameLimit frames are presented.
     int run(int frameLimit = 0);
     void requestRedraw();
+    // Safe from any thread: wakes the frame loop and redraws, for content produced off the UI thread.
+    void requestRedrawFromAnyThread();
     void requestClose();
 
     // Copies the next presented frame to a BMP file.

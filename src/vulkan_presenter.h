@@ -24,6 +24,7 @@ namespace panelspun::detail {
     X(vkGetPhysicalDeviceSurfaceFormatsKHR)     \
     X(vkEnumerateDeviceExtensionProperties)     \
     X(vkCreateDevice)                           \
+    X(vkGetPhysicalDeviceFeatures2)             \
     X(vkGetDeviceProcAddr)
 
 #define PANELSPUN_VK_DEVICE_FUNCS(X) \
@@ -86,7 +87,7 @@ struct RegionImage {
 
 class VulkanPresenter {
 public:
-    bool init(SDL_Window* window, bool validation, std::string* error);
+    bool init(SDL_Window* window, bool validation, bool allFeatures, std::string* error);
     void shutdown();
 
     // Recreates the swapchain and the UI buffer when the size changed or presentation went stale.
@@ -140,6 +141,19 @@ private:
     HostBuffer readback_;
     std::map<Panel*, RegionImage> regions_;
     VkPhysicalDeviceMemoryProperties memProps_{};
+    // Kept alive for VulkanContext::instanceInfo and deviceInfo.
+    VkApplicationInfo appInfo_{VK_STRUCTURE_TYPE_APPLICATION_INFO};
+    VkInstanceCreateInfo instanceInfo_{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+    std::vector<const char*> instanceExtensions_;
+    std::vector<const char*> layers_;
+    float queuePriority_ = 1.0f;
+    VkDeviceQueueCreateInfo queueInfo_{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
+    const char* deviceExtensions_[1] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    VkPhysicalDeviceFeatures2 features_{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    VkPhysicalDeviceVulkan11Features features11_{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
+    VkPhysicalDeviceVulkan12Features features12_{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+    VkPhysicalDeviceVulkan13Features features13_{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
+    VkDeviceCreateInfo deviceInfo_{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
     std::uint64_t frameIndex_ = 0;
     int validationErrors_ = 0;
 };

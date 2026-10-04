@@ -28,7 +28,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL onValidation(VkDebugUtilsMessageSeverityFlagBitsE
 
 }
 
-bool VulkanPresenter::init(SDL_Window* window, bool validation, std::string* error) {
+bool VulkanPresenter::init(SDL_Window* window, bool validation, bool allFeatures, std::string* error) {
     window_ = window;
     ctx_.getInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
     if (!ctx_.getInstanceProcAddr) return fail(error, std::string("no Vulkan loader: ") + SDL_GetError());
@@ -42,8 +42,9 @@ bool VulkanPresenter::init(SDL_Window* window, bool validation, std::string* err
     Uint32 sdlExtCount = 0;
     const char* const* sdlExts = SDL_Vulkan_GetInstanceExtensions(&sdlExtCount);
     if (!sdlExts) return fail(error, std::string("SDL_Vulkan_GetInstanceExtensions: ") + SDL_GetError());
-    std::vector<const char*> exts(sdlExts, sdlExts + sdlExtCount);
-    std::vector<const char*> layers;
+    std::vector<const char*>& exts = instanceExtensions_;
+    std::vector<const char*>& layers = layers_;
+    exts.assign(sdlExts, sdlExts + sdlExtCount);
 
     if (validation) {
         std::uint32_t count = 0;
@@ -57,11 +58,11 @@ bool VulkanPresenter::init(SDL_Window* window, bool validation, std::string* err
         exts.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    VkApplicationInfo app{VK_STRUCTURE_TYPE_APPLICATION_INFO};
+    VkApplicationInfo& app = appInfo_;
     app.pApplicationName = "panelspun";
     app.pEngineName = "panelspun";
-    app.apiVersion = VK_API_VERSION_1_1;
-    VkInstanceCreateInfo ici{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+    app.apiVersion = allFeatures ? VK_API_VERSION_1_3 : VK_API_VERSION_1_1;
+    VkInstanceCreateInfo& ici = instanceInfo_;
     ici.pApplicationInfo = &app;
     ici.enabledExtensionCount = static_cast<std::uint32_t>(exts.size());
     ici.ppEnabledExtensionNames = exts.data();
@@ -97,6 +98,9 @@ bool VulkanPresenter::init(SDL_Window* window, bool validation, std::string* err
     std::vector<VkPhysicalDevice> gpus(gpuCount);
     vkEnumeratePhysicalDevices(ctx_.instance, &gpuCount, gpus.data());
     for (VkPhysicalDevice gpu : gpus) {
+        VkPhysicalDeviceProperties props{};
+        vkGetPhysicalDeviceProperties(gpu, &props);
+        if (allFeatures && props.apiVersion < VK_API_VERSION_1_3) continue;
         std::uint32_t qCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(gpu, &qCount, nullptr);
         std::vector<VkQueueFamilyProperties> qprops(qCount);
@@ -115,17 +119,24 @@ bool VulkanPresenter::init(SDL_Window* window, bool validation, std::string* err
     if (!ctx_.physicalDevice) return fail(error, "no Vulkan device can present to this window");
     vkGetPhysicalDeviceMemoryProperties(ctx_.physicalDevice, &memProps_);
 
-    float priority = 1.0f;
-    VkDeviceQueueCreateInfo qci{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
+    VkDeviceQueueCreateInfo& qci = queueInfo_;
     qci.queueFamilyIndex = ctx_.queueFamily;
     qci.queueCount = 1;
-    qci.pQueuePriorities = &priority;
-    const char* devExts[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-    VkDeviceCreateInfo dci{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+    qci.pQueuePriorities = &queuePriority_;
+    VkDeviceCreateInfo& dci = deviceInfo_;
     dci.queueCreateInfoCount = 1;
     dci.pQueueCreateInfos = &qci;
     dci.enabledExtensionCount = 1;
-    dci.ppEnabledExtensionNames = devExts;
+    dci.ppEnabledExtensionNames = deviceExtensions_;
+    if (allFeatures) {
+        // Every supported core feature, as compute libraries sharing the device expect.
+        features_.pNext = &features11_;
+        features11_.pNext = &features12_;
+        features12_.pNext = &features13_;
+        vkGetPhysicalDeviceFeatures2(ctx_.physicalDevice, &features_);
+        features_.features.robustBufferAccess = VK_FALSE;
+        dci.pNext = &features_;
+    }
     r = vkCreateDevice(ctx_.physicalDevice, &dci, nullptr, &ctx_.device);
     if (r != VK_SUCCESS) return fail(error, "vkCreateDevice failed: " + std::to_string(r));
 
@@ -136,6 +147,9 @@ bool VulkanPresenter::init(SDL_Window* window, bool validation, std::string* err
 #undef PANELSPUN_LOAD_DEVICE
 
     vkGetDeviceQueue(ctx_.device, ctx_.queueFamily, 0, &ctx_.queue);
+    ctx_.apiVersion = app.apiVersion;
+    ctx_.instanceInfo = &instanceInfo_;
+    ctx_.deviceInfo = &deviceInfo_;
 
     VkCommandPoolCreateInfo pci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     pci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;

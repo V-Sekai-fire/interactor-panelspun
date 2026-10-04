@@ -16,6 +16,11 @@ struct VulkanContext {
     std::uint32_t queueFamily = 0;
     PFN_vkGetInstanceProcAddr getInstanceProcAddr = nullptr;
     PFN_vkGetDeviceProcAddr getDeviceProcAddr = nullptr;
+    std::uint32_t apiVersion = 0;
+    // How the instance and device were created, for libraries that wrap an existing device and must
+    // know its extensions and features. Valid for the window's lifetime.
+    const VkInstanceCreateInfo* instanceInfo = nullptr;
+    const VkDeviceCreateInfo* deviceInfo = nullptr;
 };
 
 // One frame of a panel's Vulkan region. image is in TRANSFER_DST_OPTIMAL on entry and must be

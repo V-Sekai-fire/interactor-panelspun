@@ -22,7 +22,10 @@ host-visible staging buffer, which is copied into the acquired swapchain image. 
 `usesVulkanRegion()` returns true is handed a window-owned image the size of its content rect, in
 `TRANSFER_DST_OPTIMAL`, with the window's command buffer and device (`VulkanRegionFrame`); after it
 records, the window copies that image over the panel's rect. `Window::vulkan()` exposes the instance,
-device and queue so a consumer can create its own resources on the same device.
+device and queue so a consumer can create its own resources on the same device. A consumer that records
+compute work, such as a GPU video decoder, sets `WindowConfig::vulkanAllFeatures`: the window then
+creates a Vulkan 1.3 device with every supported core feature enabled, and `VulkanContext` carries the
+instance and device create infos so a library that wraps an existing device can see what was enabled.
 
 Two alternatives were set aside. A native child window per region is not portable across SDL3's
 backends, and a second swapchain on the same surface is not allowed. The cost of this design is that
