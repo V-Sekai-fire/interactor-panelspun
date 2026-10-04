@@ -25,6 +25,8 @@ struct WindowConfig {
     int tickHz = 0;
     // Keeps the panels where the layout put them: split handles do not drag or highlight.
     bool lockLayout = false;
+    // Width over height the window keeps while a person resizes it; 0 leaves it free.
+    float aspectRatio = 0.0f;
     // Delivers each finger as its own pointer instead of letting SDL turn touches into one mouse.
     // A touch does not move keyboard focus.
     bool multiTouch = false;
