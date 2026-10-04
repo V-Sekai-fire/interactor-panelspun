@@ -351,8 +351,17 @@ int main(int argc, char** argv) {
             SDL_GetWindowSizeInPixels(w, &pw, &ph);
             const SDL_WindowID id = SDL_GetWindowID(w);
             const float header = std::round(24.0f * SDL_GetWindowDisplayScale(w));
-            const std::vector<Placement> p = touch->placements();
-            if (p.size() < 3) return;
+            std::vector<Placement> p = touch->placements();
+            for (int wait = 0; wait < 50 && p.size() < 3; ++wait) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                p = touch->placements();
+            }
+            if (p.size() < 3) {
+                SDL_Event quit{};
+                quit.type = SDL_EVENT_QUIT;
+                SDL_PushEvent(&quit);
+                return;
+            }
             const FingerTarget target{id, static_cast<float>(pw), static_cast<float>(ph), header};
             const float buttonY = p[0].y + 32.0f;
             postFinger(target, SDL_EVENT_FINGER_DOWN, 10, p[0].x + p[0].w * 0.5f, buttonY);

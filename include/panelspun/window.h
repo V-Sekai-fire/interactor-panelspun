@@ -30,6 +30,8 @@ struct WindowConfig {
     bool multiTouch = false;
     // Opens gamepads as they connect, for Window::gamepad; needs PANELSPUN_SDL_GAMEPAD at build time.
     bool gamepads = false;
+    // Draws each panel's title bar; without them the content fills the whole leaf.
+    bool panelHeaders = true;
 };
 
 // The first connected gamepad: sticks in -1..1 with +y down as SDL reports them, triggers in 0..1,

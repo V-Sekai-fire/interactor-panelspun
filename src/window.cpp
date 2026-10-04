@@ -51,7 +51,7 @@ struct Window::Impl {
     explicit Impl(SplitTree t) : tree(std::move(t)) {}
     ~Impl();
 
-    int headerHeight() const { return static_cast<int>(std::lround(24.0f * scale)); }
+    int headerHeight() const { return config.panelHeaders ? static_cast<int>(std::lround(24.0f * scale)) : 0; }
     Rect contentRect(const Rect& r) const {
         int hh = std::min(headerHeight(), r.h);
         return Rect{r.x, r.y + hh, r.w, r.h - hh};
@@ -459,24 +459,25 @@ Window::Impl::Frame Window::Impl::render() {
         if (l.rect.w <= 0 || l.rect.h <= 0) continue;
         Rect c = contentRect(l.rect);
         float hh = static_cast<float>(c.y - l.rect.y);
-        canvas->add(rectShape(static_cast<float>(l.rect.x), static_cast<float>(l.rect.y), static_cast<float>(l.rect.w), hh,
-                              theme.header));
         std::map<std::string, std::unique_ptr<Panel>, std::less<>>::iterator it = panels.find(l.id);
         Panel* panel = it == panels.end() ? nullptr : it->second.get();
-
-        tvg::Text* title = tvg::Text::gen();
-        title->font(detail::kDefaultFont);
-        title->size(13.0f * scale * 0.75f);
-        title->text(panel ? panel->title().c_str() : l.id.c_str());
-        title->fill(theme.text.r, theme.text.g, theme.text.b);
-        title->align(0.0f, 0.5f);
-        title->translate(l.rect.x + 8.0f * scale, l.rect.y + hh * 0.5f);
-        tvg::Shape* titleClip = rectShape(static_cast<float>(l.rect.x), static_cast<float>(l.rect.y),
-                                          static_cast<float>(l.rect.w), hh, theme.header);
-        tvg::Scene* titleScene = tvg::Scene::gen();
-        titleScene->add(title);
-        titleScene->clip(titleClip);
-        canvas->add(titleScene);
+        if (hh > 0.0f) {
+            canvas->add(rectShape(static_cast<float>(l.rect.x), static_cast<float>(l.rect.y), static_cast<float>(l.rect.w), hh,
+                                  theme.header));
+            tvg::Text* title = tvg::Text::gen();
+            title->font(detail::kDefaultFont);
+            title->size(13.0f * scale * 0.75f);
+            title->text(panel ? panel->title().c_str() : l.id.c_str());
+            title->fill(theme.text.r, theme.text.g, theme.text.b);
+            title->align(0.0f, 0.5f);
+            title->translate(l.rect.x + 8.0f * scale, l.rect.y + hh * 0.5f);
+            tvg::Shape* titleClip = rectShape(static_cast<float>(l.rect.x), static_cast<float>(l.rect.y),
+                                              static_cast<float>(l.rect.w), hh, theme.header);
+            tvg::Scene* titleScene = tvg::Scene::gen();
+            titleScene->add(title);
+            titleScene->clip(titleClip);
+            canvas->add(titleScene);
+        }
 
         if (c.w <= 0 || c.h <= 0) continue;
         canvas->add(rectShape(static_cast<float>(c.x), static_cast<float>(c.y), static_cast<float>(c.w),
