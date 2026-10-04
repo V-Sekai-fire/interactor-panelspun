@@ -17,6 +17,9 @@ struct WindowConfig {
     Theme theme;
     // Enables the Khronos validation layer; creation fails if the layer is not installed.
     bool vulkanValidation = false;
+    // Creates a Vulkan 1.3 instance and device with every supported core feature enabled, for a
+    // consumer recording compute work on the window's device; fails on a device below 1.3.
+    bool vulkanAllFeatures = false;
 };
 
 class Window {

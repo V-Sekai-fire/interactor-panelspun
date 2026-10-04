@@ -77,16 +77,20 @@ int main(int argc, char** argv) {
     bool validate = false;
     bool vulkanRegion = true;
     bool check = false;
+    bool allFeatures = false;
+    bool checkFeatures = false;
     for (int i = 1; i < argc; ++i) {
         if (!std::strcmp(argv[i], "--frames") && i + 1 < argc) frames = std::atoi(argv[++i]);
         else if (!std::strcmp(argv[i], "--screenshot") && i + 1 < argc) screenshot = argv[++i];
         else if (!std::strcmp(argv[i], "--validate")) validate = true;
         else if (!std::strcmp(argv[i], "--check")) check = true;
         else if (!std::strcmp(argv[i], "--no-vulkan-region")) vulkanRegion = false;
+        else if (!std::strcmp(argv[i], "--all-features")) allFeatures = true;
+        else if (!std::strcmp(argv[i], "--check-features")) checkFeatures = true;
         else {
             std::fprintf(stderr,
                          "usage: panelspun-demo [--frames N] [--screenshot out.bmp] [--check] [--validate] "
-                         "[--no-vulkan-region]\n");
+                         "[--no-vulkan-region] [--all-features] [--check-features]\n");
             return 2;
         }
     }
@@ -105,11 +109,19 @@ int main(int argc, char** argv) {
     WindowConfig config;
     config.title = "panelspun demo";
     config.vulkanValidation = validate;
+    config.vulkanAllFeatures = allFeatures;
     std::string error;
     std::unique_ptr<Window> window = Window::create(config, tree, &error);
     if (!window) {
         std::fprintf(stderr, "panelspun-demo: %s\n", error.c_str());
         return 1;
+    }
+    if (checkFeatures) {
+        const VulkanContext& vk = window->vulkan();
+        const bool chained = vk.deviceInfo && vk.deviceInfo->pNext;
+        std::printf("features: api %u.%u, device features %s\n", VK_API_VERSION_MAJOR(vk.apiVersion),
+                    VK_API_VERSION_MINOR(vk.apiVersion), chained ? "chained" : "none");
+        if (vk.apiVersion < VK_API_VERSION_1_3 || !vk.instanceInfo || !chained) return 1;
     }
 
     window->setPanel("video", std::make_unique<VideoPanel>(vulkanRegion));

@@ -106,7 +106,7 @@ std::unique_ptr<Window> Window::create(const WindowConfig& config, SplitTree lay
         SDL_SetWindowSize(impl->window, w, h);
         SDL_SetWindowPosition(impl->window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     }
-    if (!impl->presenter.init(impl->window, config.vulkanValidation, error)) return nullptr;
+    if (!impl->presenter.init(impl->window, config.vulkanValidation, config.vulkanAllFeatures, error)) return nullptr;
 
     if (tvg::Initializer::init(0) != tvg::Result::Success) {
         if (error) *error = "ThorVG failed to initialise";
