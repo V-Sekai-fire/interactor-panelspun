@@ -124,6 +124,7 @@ std::unique_ptr<Window> Window::create(const WindowConfig& config, SplitTree lay
         if (error) *error = std::string("SDL_CreateWindow: ") + SDL_GetError();
         return nullptr;
     }
+    if (config.aspectRatio > 0.0f) SDL_SetWindowAspectRatio(impl->window, config.aspectRatio, config.aspectRatio);
     // Where window coordinates are pixels (Windows), the requested size is grown by the display scale.
     float density = SDL_GetWindowPixelDensity(impl->window);
     float extra = density > 0.0f ? SDL_GetWindowDisplayScale(impl->window) / density : 1.0f;
