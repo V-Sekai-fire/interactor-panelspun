@@ -80,6 +80,9 @@ public:
     // Safe from any thread: wakes the frame loop and redraws, for content produced off the UI thread.
     void requestRedrawFromAnyThread();
     void requestClose();
+    // Repaints with these colours from the next frame, such as on a light or dark switch; call it on the UI thread.
+    void setTheme(const Theme& theme);
+    const Theme& theme() const;
     // Moves and sizes the window in desktop pixels, the units the OS reports other windows' rects in.
     void setBounds(int x, int y, int width, int height);
     void show();
